@@ -17,8 +17,8 @@ Servo hiLoServo;
 Servo attachmentLiftServo;
 Servo ptoServo;
 
-#define driveMotor0 2  // \ Used for controlling drive motor movement
-#define driveMotor1 4
+#define driveMotor0 4  // \ Used for controlling drive motor movement
+#define driveMotor1 2
 
 #define auxMotor0 26  // \ Used for controlling the power take off point
 #define auxMotor1 25
@@ -40,6 +40,8 @@ int adjustedSteeringValue = 90;
 int attachmentLiftServoValue = 90;
 int ptoServoValue = 90;
 int steeringTrim = 0;
+int targetValueHigh = 125;
+int targetValueLow = 10;
 
 // Triple-tap tracking
 unsigned long lastInputTime = 0;
@@ -204,8 +206,12 @@ void processGamepad(ControllerPtr ctl) {
 
     // Triple-tap detected
     if (tapCount >= 3) {
-      if (dpadValue == 2) targetPosition = 115;
-      else if (dpadValue == 1) targetPosition = 10;
+      if (dpadValue == 2) {
+        targetPosition = targetValueHigh;  
+      }
+      else if (dpadValue == 1) {
+        targetPosition = targetValueLow;
+      }
 
       if (targetPosition != -1) {
         hiLoServo.attach(hiLoServoPin);
