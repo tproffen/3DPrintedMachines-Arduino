@@ -22,7 +22,8 @@
 #define auxLights1 5
 
 // --- DUAL MODE CONFIGURATION ---
-const uint8_t ASSIGNED_CONTROLLER_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t ASSIGNED_CONTROLLER_MAC[6] = {0xA0, 0x5A, 0x5E, 0xA4, 0x7F, 0xDA};
+//const uint8_t ASSIGNED_CONTROLLER_MAC[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 Servo bucketServo;
 Servo clawServo;
