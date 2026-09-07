@@ -108,6 +108,7 @@ unsigned long lastInputTime = 0;
 const unsigned long INPUT_TIMEOUT = 40;  // ms - adjust if needed
 
 ControllerPtr activeGamepad = nullptr;
+bool unsupportedReported = false;  // so a non-gamepad is logged once, not every loop
 
 // Forward declarations
 void stopDriveMotors();
@@ -134,11 +135,9 @@ void onConnectedController(ControllerPtr ctl) {
   Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x\n", ctl->getModelName().c_str(),
                 properties.vendor_id, properties.product_id);
 
-  if (!ctl->isGamepad()) {
-    Serial.println("Unsupported controller. Disconnecting...");
-    ctl->disconnect();
-    return;
-  }
+  // NOTE: do not call ctl->isGamepad() here. Bluepad32 has not received the
+  // controller's first report yet, so the device class is still unset and even a
+  // DualShock 4 reports false. The check belongs in loop(), once data arrives.
 
   // Only one controller drives the tractor - ignore anything that shows up after it.
   if (activeGamepad != nullptr && activeGamepad != ctl) {
@@ -151,6 +150,7 @@ void onConnectedController(ControllerPtr ctl) {
   if (isMacBlank()) {
     Serial.println("Home Mode Detected (Blank MAC).");
     activeGamepad = ctl;
+    unsupportedReported = false;
     lastInputTime = millis();
     ctl->setColorLED(0, 0, 255);  // Solid Blue
     return;
@@ -168,6 +168,7 @@ void onConnectedController(ControllerPtr ctl) {
   if (isMatch) {
     Serial.println("Assigned PS4 Controller Connected (Camp Mode)!");
     activeGamepad = ctl;
+    unsupportedReported = false;
     lastInputTime = millis();
     ctl->setColorLED(0, 255, 0);  // Solid Green
   } else {
@@ -180,6 +181,7 @@ void onDisconnectedController(ControllerPtr ctl) {
   if (ctl == activeGamepad) {
     Serial.println("Controller disconnected.");
     activeGamepad = nullptr;
+    unsupportedReported = false;
     stopDriveMotors();
   }
 }
@@ -457,7 +459,14 @@ void loop() {
   bool dataUpdated = BP32.update();
 
   if (dataUpdated && activeGamepad && activeGamepad->isConnected() && activeGamepad->hasData()) {
-    processGamepad(activeGamepad);
+    // The device class is only known once the controller has sent a report, so
+    // this is the earliest point where isGamepad() gives a trustworthy answer.
+    if (activeGamepad->isGamepad()) {
+      processGamepad(activeGamepad);
+    } else if (!unsupportedReported) {
+      Serial.println("Unsupported controller - not a gamepad.");
+      unsupportedReported = true;
+    }
   } else {
     // The main loop must have some kind of "yield to lower priority task" event.
     // Otherwise, the watchdog will get triggered.
