@@ -81,6 +81,7 @@ int steeringTrim = 0;
 const int targetValueHigh = 125;
 const int targetValueLow = 10;
 const unsigned long HILO_HOLD_TIME = 2000;  // ms to hold the shift before detaching
+                                            // (raise if the gearbox needs longer)
 unsigned long servoTimer = 0;
 bool servoActive = false;
 
@@ -400,6 +401,10 @@ void processGamepad(ControllerPtr ctl) {
   processLights(ctl->thumbR());    // Lights
   processAttachments(ctl);         // Attachment lift and PTO
   processHiLoShift(ctl->dpad());   // Hi/Lo range shift
+
+  // Release the hi/lo servo here, on the controller frame, exactly as the
+  // original sketch did. Running it from loop() instead cuts the shift short.
+  updateHiLoServo();
 }
 
 //-----------------------------------------------------------------------------------
@@ -437,11 +442,11 @@ void setup() {
   steeringServo.attach(steeringServoPin);
   steeringServo.write(adjustedSteeringValue);
 
-  // Park the hi/lo servo in low range, then let updateHiLoServo() detach it.
+  // Park the hi/lo servo in low range. It stays attached and holding until the
+  // first shift - do NOT arm the detach timer here, or the gearbox is left
+  // unpowered before the driver has shifted at all.
   hiLoServo.attach(hiLoServoPin);
   hiLoServo.write(targetValueLow);
-  servoTimer = millis();
-  servoActive = true;
 
   attachmentLiftServo.attach(attachmentLiftServoPin);
   attachmentLiftServo.write(attachmentLiftServoValue);
@@ -474,9 +479,8 @@ void loop() {
     vTaskDelay(1);
   }
 
-  // Blinkers and the hi/lo servo keep running even when no fresh input arrived.
+  // Blinkers keep running even when no fresh controller frame arrived.
   updateTurnSignals();
-  updateHiLoServo();
 
   // Failsafe check: if no input for too long, stop motors
   if (millis() - lastInputTime > INPUT_TIMEOUT) {
