@@ -78,9 +78,9 @@ int steeringTrim = 0;
 
 // Hi/Lo range servo: driven only while shifting, then detached so it does not
 // buzz or fight the gearbox while parked.
-const int targetValueHigh = 125;
-const int targetValueLow = 10;
-const unsigned long HILO_HOLD_TIME = 2000;  // ms to hold the shift before detaching
+const int targetValueHigh = 115;
+const int targetValueLow = 5;
+const unsigned long HILO_HOLD_TIME = 3000;  // ms to hold the shift before detaching
                                             // (raise if the gearbox needs longer)
 unsigned long servoTimer = 0;
 bool servoActive = false;
